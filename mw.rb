@@ -15,11 +15,12 @@ def help
 		#{$0} -- get a definition from the Merriam-Webster dictionary
 		Usage:
 		$ #{$0} -h
-		$ #{$0} [-s -p -x -c -C] -w [word]
+		$ #{$0} [-s -p -x -c [-C file]] -w [word]
 		
 		Where :
 		
 		-h prints this message
+		-w is followed by the word to look up
 		-c cache_dir the results
 		-C use specified config file
 		-x check cache_dir first for definition
@@ -71,18 +72,23 @@ end
 # returns: nil
 def display_image(filename, config)
 
+	filename += ".gif"
+
+	local_store = config['cache_dir'] + "/" + filename
+
 	art_url = "https://www.merriam-webster.com/assets/mw/static/art/dict/" 
-	art_url += filename + ".gif"
+	art_url += filename
+
 	art = Net::HTTP.get(URI(art_url))
-	File.write("/tmp/" + filename, art)
+	File.write(local_store, art)
 	
-	system("#{config['viewer']} #{filename} 2>/dev/null &")
+	system("#{config['viewer']} #{local_store} 2>/dev/null")
 
 	if config["cache_result"]
 		puts "saving"
 	else
 		puts "deleting"
-		File.delete("/tmp/"+filename) if File.exist?("/tmp/"+filename)
+		File.delete(local_store) if File.exist?(local_store)
 	end
 
 	return
@@ -92,13 +98,11 @@ end
 # how to pronounce a word
 # params: remote filename, config
 # returns: nil
-def play_sound(token,config)
-
-	filename = token
+def play_sound(filename,config)
 
 	# these rules per the API documentation.
 	# Start with the base URL: 
-	sound_url = "http://media.merriam-webster.com/soundc11/"
+	sound_url = "https://media.merriam-webster.com/soundc11/"
 	# If the file name begins with "bix", the subdirectory should be "bix".
 	if filename.match(/^bix/)
 		sound_url += "bix/"
@@ -115,22 +119,23 @@ def play_sound(token,config)
 	end
 
 	filename += ".wav"
-
 	sound_url += filename
-
-	puts sound_url
-	sound_file = Net::HTTP.get(URI(sound_url))
-
-	#filename = "/tmp/" + filename
-
-	File.write(config['cache_dir']+"/"+filename, sound_file)
-
-	system("#{config['player']} #{config['cache_dir']}/#{filename} 2>/dev/null")
-
-	unless config["cache_result"]
 	
-		puts "deleting"
-		File.delete(config["cache_dir"]+"/"+filename) if File.exist?(config["cache_dir"]+"/"+filename)
+	res = Net::HTTP.get_response(URI(sound_url))
+
+	local_store = config['cache_dir']+"/"+filename
+	if res.code == "200"
+	
+		File.write(local_store, res.body)
+	
+		system("#{config['player']} #{local_store} 2>/dev/null >/dev/null")
+	
+		unless config["cache_result"]
+			File.delete(local_store) if File.exist?(local_store)
+		end
+
+	else 
+		puts "server responded with #{res.code} #{res.message}"
 	end
 
 	return
