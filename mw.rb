@@ -1,4 +1,4 @@
-#!ruby
+#!/home/jujee/.rvm/rubies/ruby-2.6.5/bin/ruby
 
 require 'uri'
 require 'net/http'
@@ -92,7 +92,9 @@ end
 # how to pronounce a word
 # params: remote filename, config
 # returns: nil
-def play_sound(filename,config)
+def play_sound(token,config)
+
+	filename = token
 
 	# these rules per the API documentation.
 	# Start with the base URL: 
@@ -119,25 +121,30 @@ def play_sound(filename,config)
 	puts sound_url
 	sound_file = Net::HTTP.get(URI(sound_url))
 
-	File.write("/tmp/" + filename, sound_file)
+	#filename = "/tmp/" + filename
 
-	system("#{config['player']} #{filename} 2>/dev/null")
+	File.write(config['cache_dir']+"/"+filename, sound_file)
 
-	if config["cache_result"]
-		puts "saving"
-	else
+	system("#{config['player']} #{config['cache_dir']}/#{filename} 2>/dev/null")
+
+	unless config["cache_result"]
+	
 		puts "deleting"
-		#File.delete("/tmp/"+filename) if File.exist?("/tmp/"+filename)
+		File.delete(config["cache_dir"]+"/"+filename) if File.exist?(config["cache_dir"]+"/"+filename)
 	end
 
 	return
 end
 
+###############################################################################
+# how to pronounce a word
+# params: word to look up, config
+# returns: parsed json object
 def get_body(word, config)
 	base_url =  "https://www.dictionaryapi.com/api/v3/references/collegiate/json/"
-	cache_file = config["cache_dir"] + "/" + word + ".json"
 	body = Net::HTTP.get(URI(base_url + word + "?key=" + config["key"]))
 	
+	cache_file = config["cache_dir"] + "/" + word + ".json"
 	if config["cache_result"]
 		File.write(cache_file, body)
 	end
@@ -178,12 +185,9 @@ def main
 		Dir.mkdir(config["cache_dir"]) unless File.exists?(config["cache_dir"])  
 	end
 	
-	#base_url =  "https://www.dictionaryapi.com/api/v3/references/collegiate/json/"
-	# XXX
 	cache_file = config["cache_dir"] + "/" + word + ".json"
 	if opt["x"]
 		if File.exists?(cache_file)
-			# XXX
 			json = JSON.parse(IO.read(cache_file))
 		else
 			json = get_body(word,config)
@@ -197,7 +201,6 @@ def main
 		# some entries have gif files associated with them
 		if opt["p"]
 			if entry["art"]
-				#art_file = entry["art"]["artid"] + ".gif"
 				display_image(entry["art"]["artid"],config) 
 			end
 		end
@@ -225,7 +228,6 @@ def main
 	return	
 end
 
-#main	
 if __FILE__ == $0
 	main
 end
