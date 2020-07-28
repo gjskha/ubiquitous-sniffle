@@ -5,6 +5,8 @@ require 'net/http'
 require 'getopt/std'
 require 'json'
 
+# TODO: put all images and sounds at the end, then delete there if needed
+
 ###############################################################################
 # how to use the program 
 # params: nothing
@@ -67,6 +69,40 @@ def parse_config(location)
 end
 
 ###############################################################################
+# 
+# params: 
+# returns: 
+def fetch_resource(file,url,config)
+
+	resource = nil
+
+	# methods are ordered by preference via the -x flag
+	for method in config["methods"]
+
+		if method == "disk"
+
+			# read the fully qualified file
+			if File.exist?(file)
+				resource = file
+			end
+		end
+
+		if method == "net"
+	
+			res = Net::HTTP.get_response(URI(url))
+			if res.code == "200"
+				File.write(file, res.body)
+
+				resource = file
+			end
+		end
+
+	end
+
+	resource	
+end
+
+###############################################################################
 # If a word has an illustration we can fetch it
 # params: filename string, config
 # returns: nil
@@ -74,21 +110,21 @@ def display_image(filename, config)
 
 	filename += ".gif"
 
-	local_store = config['cache_dir'] + "/" + filename
-
 	art_url = "https://www.merriam-webster.com/assets/mw/static/art/dict/" 
 	art_url += filename
 
-	art = Net::HTTP.get(URI(art_url))
-	File.write(local_store, art)
-	
-	system("#{config['viewer']} #{local_store} 2>/dev/null")
+	# XXX fix this do I need to return anything?
+	filename = config["cache_dir"] + "/" + filename
+	resource = fetch_resource(filename,art_url,config)
 
-	if config["cache_result"]
-		puts "saving"
-	else
+	if resource != nil
+		system("#{config['viewer']} #{resource} 2>/dev/null")
+
+	end
+
+	unless config["cache_result"]
 		puts "deleting"
-		File.delete(local_store) if File.exist?(local_store)
+		File.delete(resource) if File.exist?(resource)
 	end
 
 	return
@@ -119,23 +155,17 @@ def play_sound(filename,config)
 	end
 
 	filename += ".wav"
+
 	sound_url += filename
-	
-	res = Net::HTTP.get_response(URI(sound_url))
 
-	local_store = config['cache_dir']+"/"+filename
-	if res.code == "200"
-	
-		File.write(local_store, res.body)
-	
-		system("#{config['player']} #{local_store} 2>/dev/null >/dev/null")
-	
-		unless config["cache_result"]
-			File.delete(local_store) if File.exist?(local_store)
-		end
+	filename = config['cache_dir']+"/"+filename+".wav"
 
-	else 
-		puts "server responded with #{res.code} #{res.message}"
+	local_store = fetch_resource(filename,sound_url,config)
+
+	system("#{config['player']} #{local_store} 2>/dev/null >/dev/null")
+
+	unless config["cache_result"]
+		File.delete(local_store) if File.exist?(local_store)
 	end
 
 	return
@@ -146,15 +176,21 @@ end
 # params: word to look up, config
 # returns: parsed json object
 def get_body(word, config)
-	base_url =  "https://www.dictionaryapi.com/api/v3/references/collegiate/json/"
-	body = Net::HTTP.get(URI(base_url + word + "?key=" + config["key"]))
-	
-	cache_file = config["cache_dir"] + "/" + word + ".json"
-	if config["cache_result"]
-		File.write(cache_file, body)
+
+	url =  "https://www.dictionaryapi.com/api/v3/references/collegiate/json/"
+	url += word + "?key=" + config["key"]
+
+	file = config['cache_dir']+"/"+word + ".json"	
+	#resource = fetch_resource(file,url)
+	resource = fetch_resource(file,url,config)
+
+	data = JSON.parse(IO.read(resource))
+
+	unless config["cache_result"]
+		File.delete(resource) if File.exist?(resource)
 	end
 
-	JSON.parse(body)
+	data
 end
 
 ###############################################################################
@@ -171,12 +207,13 @@ def main
 	end
 	
 	# deal with configuration file
-	config_file = ENV["HOME"] + "/.mwrc";
+	config_file = ENV["HOME"] + "/.mwrc"
 	if opt["C"]
 		config_file = opt["C"]
 	end
 	config = parse_config(config_file)
 	
+	# get the word to look up
 	word = String.new
 	if opt["w"]
 		word = opt["w"]
@@ -184,25 +221,27 @@ def main
 		help
 	end
 	
+	# execute caching options
 	config["cache_result"] = false
 	if opt["c"]
 		config["cache_result"] = true
 		Dir.mkdir(config["cache_dir"]) unless File.exists?(config["cache_dir"])  
 	end
-	
+
+	# get the definitions from disk or the remote server.
 	cache_file = config["cache_dir"] + "/" + word + ".json"
+
+	# set up method ordering
+	config["methods"] = ["net","disk"]
 	if opt["x"]
-		if File.exists?(cache_file)
-			json = JSON.parse(IO.read(cache_file))
-		else
-			json = get_body(word,config)
-		end
-	else
-		json = get_body(word,config)
+		#config["local_first"] = true
+		config["methods"] = ["disk","net"]
+
 	end
 	
+	json = get_body(word,config)
+
 	json.each { |entry|
-	
 		# some entries have gif files associated with them
 		if opt["p"]
 			if entry["art"]
