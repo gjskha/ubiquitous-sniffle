@@ -5,7 +5,18 @@ require 'net/http'
 require 'getopt/std'
 require 'json'
 
-# TODO: put all images and sounds at the end, then delete there if needed
+###############################################################################
+# cleaning up on completion
+# params: array of results
+# returns: nil
+def clean(word_array)
+
+	for word in word_array
+	#	puts word.to_s
+	#	File.delete(resource) if File.exist?(resource)
+	end
+
+end
 
 ###############################################################################
 # how to use the program 
@@ -69,9 +80,9 @@ def parse_config(location)
 end
 
 ###############################################################################
-# 
-# params: 
-# returns: 
+# get the definitions from disk or the remote server.
+# params: file to fetch, url to use, configuration
+# returns: the resource requested or nil 
 def fetch_resource(file,url,config)
 
 	resource = nil
@@ -79,24 +90,19 @@ def fetch_resource(file,url,config)
 	# methods are ordered by preference via the -x flag
 	for method in config["methods"]
 
-		if method == "disk"
-
-			# read the fully qualified file
+		if method == "disk" && resource == nil
 			if File.exist?(file)
 				resource = file
 			end
 		end
 
-		if method == "net"
-	
+		if method == "net" && resource == nil
 			res = Net::HTTP.get_response(URI(url))
 			if res.code == "200"
 				File.write(file, res.body)
-
 				resource = file
 			end
 		end
-
 	end
 
 	resource	
@@ -113,18 +119,13 @@ def display_image(filename, config)
 	art_url = "https://www.merriam-webster.com/assets/mw/static/art/dict/" 
 	art_url += filename
 
-	# XXX fix this do I need to return anything?
 	filename = config["cache_dir"] + "/" + filename
-	resource = fetch_resource(filename,art_url,config)
 
-	if resource != nil
-		system("#{config['viewer']} #{resource} 2>/dev/null")
-
-	end
-
-	unless config["cache_result"]
-		puts "deleting"
-		File.delete(resource) if File.exist?(resource)
+	#resource = fetch_resource(filename,art_url,config)
+	#if resource != nil
+	if fetch_resource(filename,art_url,config)
+		#system("#{config['viewer']} #{resource} 2>/dev/null")
+		system("#{config['viewer']} #{filename} 2>/dev/null")
 	end
 
 	return
@@ -155,17 +156,12 @@ def play_sound(filename,config)
 	end
 
 	filename += ".wav"
-
 	sound_url += filename
 
-	filename = config['cache_dir']+"/"+filename+".wav"
+	filename = config['cache_dir']+"/"+filename
 
-	local_store = fetch_resource(filename,sound_url,config)
-
-	system("#{config['player']} #{local_store} 2>/dev/null >/dev/null")
-
-	unless config["cache_result"]
-		File.delete(local_store) if File.exist?(local_store)
+	if fetch_resource(filename,sound_url,config)
+		system("#{config['player']} #{filename} 2>/dev/null >/dev/null")
 	end
 
 	return
@@ -181,16 +177,39 @@ def get_body(word, config)
 	url += word + "?key=" + config["key"]
 
 	file = config['cache_dir']+"/"+word + ".json"	
-	#resource = fetch_resource(file,url)
-	resource = fetch_resource(file,url,config)
 
-	data = JSON.parse(IO.read(resource))
+	data = nil
 
-	unless config["cache_result"]
-		File.delete(resource) if File.exist?(resource)
+	if fetch_resource(file,url,config)
+		data = JSON.parse(IO.read(file))
 	end
 
 	data
+end
+
+###############################################################################
+# print out the resutls
+# params: array of results, config
+# returns: nil
+def print(word_array,config)
+
+	for word in word_array
+
+		puts word["word"]
+
+		for d in word["defs"]
+			puts "-- #{d}"
+		end
+
+		if word["sound"]
+			play_sound(word["sound"],config) 
+			sleep 1
+		end
+
+		if word["art"]
+			display_image(word["art"],config)
+		end
+	end
 end
 
 ###############################################################################
@@ -228,24 +247,32 @@ def main
 		Dir.mkdir(config["cache_dir"]) unless File.exists?(config["cache_dir"])  
 	end
 
-	# get the definitions from disk or the remote server.
-	cache_file = config["cache_dir"] + "/" + word + ".json"
-
 	# set up method ordering
-	config["methods"] = ["net","disk"]
 	if opt["x"]
-		#config["local_first"] = true
 		config["methods"] = ["disk","net"]
-
+	else
+		config["methods"] = ["net","disk"]
 	end
 	
 	json = get_body(word,config)
 
+	word_array = Array.new
+
 	json.each { |entry|
+
+		struct = Hash.new
+		struct["word"] = entry["meta"]["id"]
+
+		struct["defs"] = Array.new
+
+		entry["shortdef"].each { |shortdef|
+			struct["defs"].push(shortdef)
+		}
+
 		# some entries have gif files associated with them
 		if opt["p"]
 			if entry["art"]
-				display_image(entry["art"]["artid"],config) 
+				struct["art"] = entry["art"]["artid"]
 			end
 		end
 	
@@ -253,25 +280,27 @@ def main
 		if opt["s"]
 			# pronounce the words seems to be in two possible locations
 			if entry.dig("uros", 0, "prs", 0, "sound", "audio")
-				play_sound(entry.dig("uros", 0, "prs", 0, "sound", "audio"),config)
+				struct["sound"] = entry.dig("uros", 0, "prs", 0, "sound", "audio")
 			end
 	
 			if entry.dig("hwi", "prs", 0, "sound", "audio")
-				play_sound(entry.dig("hwi", "prs", 0, "sound", "audio"),config)
+				struct["sound"] = entry.dig("hwi", "prs", 0, "sound", "audio")
 			end
 		end
 	
-		#print the definition
-		puts entry["meta"]["id"] 
-	
-		entry["shortdef"].each { |shortdef|
-			puts  " -- " + shortdef
-		}
+		word_array.push(struct)
 	}
+
+	print(word_array,config)
+
+	unless config["cache_result"]
+		clean(word_array)
+	end
 
 	return	
 end
 
+# we use this pythonism for facilitating testing
 if __FILE__ == $0
 	main
 end
