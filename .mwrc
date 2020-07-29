@@ -1,6 +1,6 @@
 { 	
 "player" : "mplayer", 
 "viewer" : "gthumb",
-"cache_dir" : "~/.mw",
+"cache_dir" : ".mw",
 "key" : "secret"
 }
