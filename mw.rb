@@ -1,4 +1,4 @@
-#!/home/jujee/.rvm/rubies/ruby-2.6.5/bin/ruby
+#!ruby
 
 require 'uri'
 require 'net/http'
@@ -9,13 +9,27 @@ require 'json'
 # cleaning up on completion
 # params: array of results
 # returns: nil
-def clean(word_array)
+def clean(word_array,config)
 
-	for word in word_array
-	#	puts word.to_s
-	#	File.delete(resource) if File.exist?(resource)
+	unless config["cache_result"]
+
+		# remove "1" at the end of first of multiple entries
+		json = config["cache_dir"] + "/" + word_array[0]["word"].split(":").first + ".json"
+		File.delete(json) if File.exist?(json)
+
+		for word in word_array
+		
+			if word["sound"]
+				wav = config["cache_dir"] + "/" + word["sound"] + ".wav"
+				File.delete(wav) if File.exist?(wav)
+			end
+
+			if word["art"]
+				art = config["cache_dir"] + "/" + word["art"] + ".gif"
+				File.delete(art) if File.exist?(art)
+			end
+		end
 	end
-
 end
 
 ###############################################################################
@@ -28,15 +42,15 @@ def help
 		#{$0} -- get a definition from the Merriam-Webster dictionary
 		Usage:
 		$ #{$0} -h
-		$ #{$0} [-s -p -x -c [-C file]] -w [word]
+		$ #{$0} [-s -p -x -c [-r config-file]] -w [word]
 		
 		Where :
 		
 		-h prints this message
 		-w is followed by the word to look up
-		-c cache_dir the results
-		-C use specified config file
-		-x check cache_dir first for definition
+		-c cache the results
+		-r use specified config file
+		-x check cache on disk first
 		-s play associated sound file, if available
 		-p display associated image, if available
 	eohelp
@@ -176,7 +190,7 @@ def get_body(word, config)
 	url =  "https://www.dictionaryapi.com/api/v3/references/collegiate/json/"
 	url += word + "?key=" + config["key"]
 
-	file = config['cache_dir']+"/"+word + ".json"	
+	file = config['cache_dir'] + "/" + word + ".json"	
 
 	data = nil
 
@@ -219,7 +233,7 @@ end
 def main
 	
 	# parse command line options
-	opt = Getopt::Std.getopts("chspxw:C:")
+	opt = Getopt::Std.getopts("chspxw:r:")
 	
 	if opt["h"]
 		help
@@ -227,8 +241,8 @@ def main
 	
 	# deal with configuration file
 	config_file = ENV["HOME"] + "/.mwrc"
-	if opt["C"]
-		config_file = opt["C"]
+	if opt["r"]
+		config_file = opt["r"]
 	end
 	config = parse_config(config_file)
 	
@@ -293,9 +307,7 @@ def main
 
 	print(word_array,config)
 
-	unless config["cache_result"]
-		clean(word_array)
-	end
+	clean(word_array,config)
 
 	return	
 end
