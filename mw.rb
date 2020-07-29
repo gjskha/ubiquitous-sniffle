@@ -6,33 +6,6 @@ require 'getopt/std'
 require 'json'
 
 ###############################################################################
-# cleaning up on completion
-# params: array of results
-# returns: nil
-def clean(word_array,config)
-
-	unless config["cache_result"]
-
-		# remove "1" at the end of first of multiple entries
-		json = config["cache_dir"] + "/" + word_array[0]["word"].split(":").first + ".json"
-		File.delete(json) if File.exist?(json)
-
-		for word in word_array
-		
-			if word["sound"]
-				wav = config["cache_dir"] + "/" + word["sound"] + ".wav"
-				File.delete(wav) if File.exist?(wav)
-			end
-
-			if word["art"]
-				art = config["cache_dir"] + "/" + word["art"] + ".gif"
-				File.delete(art) if File.exist?(art)
-			end
-		end
-	end
-end
-
-###############################################################################
 # how to use the program 
 # params: nothing
 # returns: exit
@@ -94,6 +67,33 @@ def parse_config(location)
 end
 
 ###############################################################################
+# cleaning up on completion
+# params: array of results
+# returns: nil
+def clean(word_array,config)
+
+	unless config["cache_result"]
+
+		# remove "1" at the end of first of multiple entries
+		json = config["cache_dir"] + "/" + word_array[0]["word"].split(":").first + ".json"
+		File.delete(json) if File.exist?(json)
+
+		for word in word_array
+		
+			if word["sound"]
+				wav = config["cache_dir"] + "/" + word["sound"] + ".wav"
+				File.delete(wav) if File.exist?(wav)
+			end
+
+			if word["art"]
+				art = config["cache_dir"] + "/" + word["art"] + ".gif"
+				File.delete(art) if File.exist?(art)
+			end
+		end
+	end
+end
+
+###############################################################################
 # get the definitions from disk or the remote server.
 # params: file to fetch, url to use, configuration
 # returns: the resource requested or nil 
@@ -135,10 +135,7 @@ def display_image(filename, config)
 
 	filename = config["cache_dir"] + "/" + filename
 
-	#resource = fetch_resource(filename,art_url,config)
-	#if resource != nil
 	if fetch_resource(filename,art_url,config)
-		#system("#{config['viewer']} #{resource} 2>/dev/null")
 		system("#{config['viewer']} #{filename} 2>/dev/null")
 	end
 
@@ -151,8 +148,7 @@ end
 # returns: nil
 def play_sound(filename,config)
 
-	# these rules per the API documentation.
-	# Start with the base URL: 
+	# These rules per the API documentation. Start with the base URL: 
 	sound_url = "https://media.merriam-webster.com/soundc11/"
 	# If the file name begins with "bix", the subdirectory should be "bix".
 	if filename.match(/^bix/)
@@ -202,7 +198,7 @@ def get_body(word, config)
 end
 
 ###############################################################################
-# print out the resutls
+# print out the results
 # params: array of results, config
 # returns: nil
 def print(word_array,config)
@@ -292,7 +288,7 @@ def main
 	
 		# play sound
 		if opt["s"]
-			# pronounce the words seems to be in two possible locations
+			# the sound files seem to be in one of two possible locations
 			if entry.dig("uros", 0, "prs", 0, "sound", "audio")
 				struct["sound"] = entry.dig("uros", 0, "prs", 0, "sound", "audio")
 			end
