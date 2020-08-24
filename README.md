@@ -1,2 +1,4 @@
 # ubiquitous-sniffle
-interface to the Merriam Webster dictionary
+
+spellcheck 
+mw.rb - interface to the Merriam Webster dictionary

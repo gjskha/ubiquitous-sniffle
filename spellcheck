@@ -1,1 +1,7 @@
-# wicked cool
+#!/bin/bash
+# tbd: pipes
+for word; do
+	if [ $(echo $word | aspell list) ]; then
+		echo \'$word\' mispelled
+	fi
+done

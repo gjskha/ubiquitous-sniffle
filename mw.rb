@@ -171,7 +171,7 @@ def play_sound(filename,config)
 	filename = config['cache_dir']+"/"+filename
 
 	if fetch_resource(filename,sound_url,config)
-		system("#{config['player']} #{filename} 2>/dev/null >/dev/null")
+		system("#{config['player']} #{filename} 2>/dev/null")
 	end
 
 	return
