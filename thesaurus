@@ -1,0 +1,62 @@
+#!/usr/bin/python
+# interface to the Merriam-Webster thesaurus
+
+import json
+import urllib.request
+import getopt
+import sys
+import os
+
+def help():
+	print("help")
+
+def fetch_resource(word,config):
+
+	resource = None
+
+	for method in config["methods"]:
+		if (method == "net") and (resource == None):
+			url = "https://www.dictionaryapi.com/api/v3/references/thesaurus/json/" + word + "?key=" + config["key"]
+			print(url)
+			resource = 1
+		if (method == "disk") and (resource == None):
+			print("disk")
+
+	return resource
+
+def parse_config(filename):
+	print(filename)
+
+	with open(filename) as config_file: slurp = config_file.read()
+	config = json.loads(slurp)
+
+	return config
+
+def main():
+
+	# defaults
+	methods = ["net","disk"]
+	config_file = os.environ['HOME'] + "/.mwrc"
+
+	# parse command line options
+	(args, _) = getopt.getopt(sys.argv[1:], 'hxc:w:')
+	for o,a in args:
+		if o == "-h":
+			help()
+			sys.exit()
+		elif o == "-w":
+			word = a
+		elif o == "-x":
+			methods = ["disk","net"]
+		elif o == "-c":
+			config_file = a
+		else:
+			assert False, "unhandled option"
+	
+
+	config = parse_config(config_file)
+	config["methods"] = methods
+	json = fetch_resource(word, config)
+
+if __name__ == "__main__":
+ 	main()
