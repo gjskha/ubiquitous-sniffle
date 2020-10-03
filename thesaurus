@@ -7,11 +7,17 @@ import getopt
 import sys
 import os
 
+"""
+print out a help message
+"""
 def help():
 	print("help")
 
+"""
+go get the serialized data. it checks on disk and on the remote server, in the
+order specified in the config.
+"""
 def fetch_resource(filename,url,config):
-
 	resource = None
 
 	for method in config["methods"]:
@@ -35,6 +41,9 @@ def fetch_resource(filename,url,config):
 	return resource
 
 
+"""
+accepts a filename and returns a deserialized representation of the json.
+"""
 def parse_config(filename):
 	config = None
 	try:
@@ -45,8 +54,10 @@ def parse_config(filename):
 
 	return config
 
+"""
+prepare the request for an entry
+"""
 def get_body(word,config):
-
 	url = "https://www.dictionaryapi.com/api/v3/references/thesaurus/json/" + word + "?key=" + config["tkey"]
 	filename = config["cache_dir"] + "/" + word + ".json"
 
@@ -54,11 +65,14 @@ def get_body(word,config):
 
 	return json
 
+"""
+"""
 def print_data(data,config):
-
 	print("print the data")
 
-
+"""
+parse the command line options and do the work
+"""
 def main():
 
 	# defaults
@@ -80,7 +94,6 @@ def main():
 		else:
 			assert False, "unhandled option"
 	
-
 	config = parse_config(config_file)
 	config["methods"] = methods
 
@@ -92,17 +105,23 @@ def main():
 	#	sys.exit
 
 	for i in range(len(data)):
-		print(i,end=") ")
+		print("(%d)" %(i+1))
+		print('')
 		print("function: "+data[i]["fl"])
 
 		# synonyms
 		print("synonyms:")
 		for j in range(len(data[i]["meta"]["syns"])):
-			print(j,end=") ")
+			print(j+1,end=") ")
 			print(', '.join(data[i]["meta"]["syns"][j]))
+			print('')
+
+		# antonyms
 
 		#print_data(word_data,config)
 
-
+"""
+entry point
+"""
 if __name__ == "__main__":
  	main()
