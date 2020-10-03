@@ -9,6 +9,14 @@ function check_word() {
 	fi
 }
 
+aspell=$(which aspell)
+rv=$?
+if [ $rv -gt 0 ]; then
+	echo "spellcheck not found"
+	exit $rv
+fi
+
+# process input method
 if [ -t 0 ]; then
 	for word; do
 		check_word $word
