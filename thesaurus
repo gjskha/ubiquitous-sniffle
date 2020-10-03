@@ -91,13 +91,17 @@ def main():
 	#	print(data)
 	#	sys.exit
 
-	# grammar
-	print(data[0]["fl"]+":")
+	for i in range(len(data)):
+		print(i,end=") ")
+		print("function: "+data[i]["fl"])
 
-	for syn in data[0]["meta"]["syns"][0]:
-		print(syn)
+		# synonyms
+		print("synonyms:")
+		for j in range(len(data[i]["meta"]["syns"])):
+			print(j,end=") ")
+			print(', '.join(data[i]["meta"]["syns"][j]))
 
-	#print_data(word_data,config)
+		#print_data(word_data,config)
 
 
 if __name__ == "__main__":
