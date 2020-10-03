@@ -2,7 +2,7 @@
 # interface to the Merriam-Webster thesaurus
 
 import json
-import urllib.request
+import requests
 import getopt
 import sys
 import os
@@ -10,27 +10,54 @@ import os
 def help():
 	print("help")
 
-def fetch_resource(word,config):
+def fetch_resource(filename,url,config):
 
 	resource = None
 
 	for method in config["methods"]:
 		if (method == "net") and (resource == None):
-			url = "https://www.dictionaryapi.com/api/v3/references/thesaurus/json/" + word + "?key=" + config["key"]
-			print(url)
-			resource = 1
+
+			response = requests.get(url)
+
+			if response.status_code == 200:
+
+				resource = response.json()
+
 		if (method == "disk") and (resource == None):
-			print("disk")
+			try:
+
+				with open(filename) as f:
+					resource = json.loads(f.read())
+
+			except IOError:
+				print("File not accessible")
 
 	return resource
 
-def parse_config(filename):
-	print(filename)
 
-	with open(filename) as config_file: slurp = config_file.read()
-	config = json.loads(slurp)
+def parse_config(filename):
+	config = None
+	try:
+		with open(filename) as config_file:
+			config = json.loads(config_file.read())
+	except IOError:
+		print("config file not found")
 
 	return config
+
+def get_body(word,config):
+
+	url = "https://www.dictionaryapi.com/api/v3/references/thesaurus/json/" + word + "?key=" + config["tkey"]
+	filename = config["cache_dir"] + "/" + word + ".json"
+
+	json = fetch_resource(filename,url,config)
+
+	return json
+
+def print_data(data,config):
+
+	print("print the data")
+
 
 def main():
 
@@ -56,7 +83,22 @@ def main():
 
 	config = parse_config(config_file)
 	config["methods"] = methods
-	json = fetch_resource(word, config)
+
+	data = get_body(word, config)
+
+	# XXX unexpected data
+	#if not data[0]["fl"]:
+	#	print(data)
+	#	sys.exit
+
+	# grammar
+	print(data[0]["fl"]+":")
+
+	for syn in data[0]["meta"]["syns"][0]:
+		print(syn)
+
+	#print_data(word_data,config)
+
 
 if __name__ == "__main__":
  	main()
