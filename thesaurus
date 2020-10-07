@@ -99,14 +99,18 @@ def main():
 
 	data = get_body(word, config)
 
-	# XXX unexpected data
-	#if not data[0]["fl"]:
-	#	print(data)
-	#	sys.exit
+	if not data:
+		print("Empty response")
+		sys.exit()
+
+	# we received unexpected data
+	if 'hwi' not in data[0]:
+		print(data)
+		sys.exit()
 
 	for i in range(len(data)):
-		print("(%d)" %(i+1))
-		print('')
+		print("==%d==" %(i+1))
+		#print('')
 		print("function: "+data[i]["fl"])
 
 		# synonyms
@@ -114,7 +118,7 @@ def main():
 		for j in range(len(data[i]["meta"]["syns"])):
 			print(j+1,end=") ")
 			print(', '.join(data[i]["meta"]["syns"][j]))
-			print('')
+			#print('')
 
 		# antonyms
 
