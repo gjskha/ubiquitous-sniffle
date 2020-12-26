@@ -58,7 +58,7 @@ def parse_config(location)
 	end
 
 	# We cannot continue without a key
-	if config["key"].nil?
+	if config["dictionary_key"].nil?
 		puts "Merriam-Webster API key is missing, exiting."
 		exit
 	end
@@ -184,7 +184,7 @@ end
 def get_body(word, config)
 
 	url =  "https://www.dictionaryapi.com/api/v3/references/collegiate/json/"
-	url += word + "?key=" + config["key"]
+	url += word + "?key=" + config["dictionary_key"]
 
 	file = config['cache_dir'] + "/" + word + ".json"	
 

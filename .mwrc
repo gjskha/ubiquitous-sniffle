@@ -1,6 +1,7 @@
 { 	
-"player" : "mplayer", 
+"player" : "mplayer >/dev/null 2>&1",
 "viewer" : "gthumb",
 "cache_dir" : ".mw",
-"key" : "secret"
+"dictionary_key" : "secret",
+"thesaurus_key" : "secret"
 }

@@ -24,17 +24,14 @@ def fetch_resource(filename,url,config):
 		if (method == "net") and (resource == None):
 
 			response = requests.get(url)
-
 			if response.status_code == 200:
-
 				resource = response.json()
 
 		if (method == "disk") and (resource == None):
-			try:
 
+			try:
 				with open(filename) as f:
 					resource = json.loads(f.read())
-
 			except IOError:
 				print("File not accessible")
 
@@ -58,7 +55,7 @@ def parse_config(filename):
 prepare the request for an entry
 """
 def get_body(word,config):
-	url = "https://www.dictionaryapi.com/api/v3/references/thesaurus/json/" + word + "?key=" + config["tkey"]
+	url = "https://www.dictionaryapi.com/api/v3/references/thesaurus/json/" + word + "?key=" + config["thesaurus_key"]
 	filename = config["cache_dir"] + "/" + word + ".json"
 
 	json = fetch_resource(filename,url,config)
@@ -75,52 +72,81 @@ parse the command line options and do the work
 """
 def main():
 
-	# defaults
+	# set program defaults first
 	methods = ["net","disk"]
 	config_file = os.environ['HOME'] + "/.mwrc"
+	antonyms = True
+	synonyms = True
 
 	# parse command line options
-	(args, _) = getopt.getopt(sys.argv[1:], 'hxc:w:')
+	(args, _) = getopt.getopt(sys.argv[1:], 'hxc:w:as')
 	for o,a in args:
+
 		if o == "-h":
 			help()
-			sys.exit()
+			exit()
+
 		elif o == "-w":
 			word = a
+
+		# look up word in cache first
 		elif o == "-x":
 			methods = ["disk","net"]
+
+		# No synonyms, only antonyms
+		elif o == "-s":
+			synonyms = False
+		# No antonyms, only synonyms
+		elif o == "-a":
+			antonyms = False
+
 		elif o == "-c":
 			config_file = a
+
 		else:
 			assert False, "unhandled option"
 	
+	# testing for non instantiated variables in python is verbose
+	try:
+		word
+	except NameError:
+		print("No word specified, quitting.")
+		exit(1)
+
 	config = parse_config(config_file)
 	config["methods"] = methods
 
 	data = get_body(word, config)
 
+	#print(data[0])
+
 	if not data:
-		print("Empty response")
-		sys.exit()
+		print("Empty response from remote server.")
+		exit()
 
 	# we received unexpected data
 	if 'hwi' not in data[0]:
 		print(data)
-		sys.exit()
+		exit()
 
 	for i in range(len(data)):
-		print("==%d==" %(i+1))
-		#print('')
-		print("function: "+data[i]["fl"])
+		print('')
+		#print("==%d==" %(i+1))
+		print("The word " + word + " as a " + data[i]["fl"] + ":")
 
 		# synonyms
-		print("synonyms:")
-		for j in range(len(data[i]["meta"]["syns"])):
-			print(j+1,end=") ")
-			print(', '.join(data[i]["meta"]["syns"][j]))
-			#print('')
+		if synonyms and len(data[i]["meta"]["syns"]) > 0:
+			print("synonyms:")
+			for j in range(len(data[i]["meta"]["syns"])):
+				print(j+1, end=") ")
+				print(', '.join(data[i]["meta"]["syns"][j]))
 
 		# antonyms
+		if antonyms and len(data[i]["meta"]["ants"]) > 0:
+			print("antonyms:")
+			for j in range(len(data[i]["meta"]["ants"])):
+				print(j+1, end=") ")
+				print(', '.join(data[i]["meta"]["ants"][j]))
 
 		#print_data(word_data,config)
 
