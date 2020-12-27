@@ -129,6 +129,7 @@ def main():
 		print(data)
 		exit()
 
+	# todo: work all noun, adjective, verb senses together?
 	for i in range(len(data)):
 		print('')
 		#print("==%d==" %(i+1))
