@@ -11,7 +11,27 @@ import os
 print out a help message
 """
 def help():
-	print("help")
+
+	scriptname = os.path.basename(__file__)
+
+	helpmsg = """
+	{} -- lookup the Merriam-Webster thesaurus
+	Usage:
+	$ {} -h
+	$ {} [-s -a -x -c ] -w [word]
+
+	Where :
+
+	-h prints this message
+	-w is followed by the word to look up
+	-c cache the results
+	-a do not display antonyms
+	-s do not display synonyms
+	-r use specified config file
+	-x check cache on disk first
+	""".format(scriptname,scriptname,scriptname)
+
+	print(helpmsg)
 
 """
 go get the serialized data. it checks on disk and on the remote server, in the

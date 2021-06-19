@@ -1,13 +1,27 @@
 #!/bin/bash
 
+# $ ./spellcheck <t/good.txt 
+# 0 mispellings found.
+# $ ./spellcheck <t/bad.txt 
+# 'recieve' mispelled
+# 1 mispellings found.
+# $ cat t/bad.txt | ./spellcheck
+# 'recieve' mispelled
+# 1 mispellings found.
+# $ cat t/good.txt | ./spellcheck
+# 0 mispellings found.
+
 function check_word() {
 
 	word=$1
 
 	if [ $(echo $word | aspell list) ]; then
-		echo \'$word\' mispelled
+		echo "'$word' mispelled"
+		mispellings=$(( $mispellings + 1 ))
 	fi
 }
+
+mispellings=0
 
 aspell=$(which aspell)
 rv=$?
@@ -16,13 +30,42 @@ if [ $rv -gt 0 ]; then
 	exit $rv
 fi
 
+optstring="qf:"
+while getopts ${optstring} arg; do
+	case ${arg} in
+		q)
+			QUIET='true'
+			;;
+		f)
+			FILE="${OPTARG}"
+			;;
+		?)
+			echo "Invalid option: -${OPTARG}."
+			echo
+			;;
+	esac
+done
+
 # process input method
+
+# if FILE...
+# 
+
+# read from command line
 if [ -t 0 ]; then
+	# echo FILE is $FILE
+	# if file is unspecified, use stdin
+	#for word in $(cat ${FILE:-"-"}); do
 	for word; do
 		check_word $word
 	done
-else 
+
+# read from pipe
+else
 	while read word; do
 		check_word $word
 	done
 fi
+
+# todo: grammar for singular vs. plural
+[ -z $QUIET] && echo "$mispellings mispellings found."
