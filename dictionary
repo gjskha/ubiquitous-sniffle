@@ -57,6 +57,10 @@ def parse_config(location)
 		config["cache_dir"] = ENV["HOME"] + "/.mw"
 	end
 
+        if not File.directory?(config["cache_dir"])
+            Dir.mkdir(config["cache_dir"])
+        end
+
 	# We cannot continue without a key
 	if config["dictionary_key"].nil?
 		puts "Merriam-Webster API key is missing, exiting."
@@ -254,7 +258,6 @@ def main
 	config["cache_result"] = false
 	if opt["c"]
 		config["cache_result"] = true
-		Dir.mkdir(config["cache_dir"]) unless File.exists?(config["cache_dir"])  
 	end
 
 	# set up method ordering
